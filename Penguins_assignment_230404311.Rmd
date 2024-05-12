@@ -1,0 +1,370 @@
+---
+title: "MAS8403 Final Assignment (Student No. : 230404311)"
+author: "Hrithik Kumar"
+date: "2023-10-17"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+In this report, we analyse a dataset containing information about different species of penguins located in The Palmer Station, Antarctica. The data is present in the palmerpenguins library.
+
+```{r, include=FALSE}
+library(palmerpenguins)
+library(pillar)
+library(ggplot2)
+```
+
+```{r, warning=FALSE,message=FALSE, echo=FALSE}
+data("penguins")
+penguins_clean <- na.omit(penguins) #removes missing rows
+
+my.student.number <- 230404311
+set.seed(my.student.number)
+my.penguins <- penguins_clean[sample(nrow(penguins_clean),200),]
+
+```
+
+The data set contains `r nrow(my.penguins)` rows and `r ncol(my.penguins)` columns. Each row represents information about the species of Penguin(`r unique(my.penguins$species)`), the island it is from(`r unique(my.penguins$island)`), its gender and some body measurements. Let's try to understand the distribution of the data for different species of penguins and the islands they belong to.
+
+```{r, echo=FALSE}
+table(my.penguins$species,my.penguins$island)
+```
+
+```{r, echo=FALSE}
+aggregate(cbind(flipper_length_mm, bill_length_mm, bill_depth_mm, body_mass_g) ~ species,
+          data=my.penguins, mean)
+
+```
+
+We have roughly 50-60 samples from each species. If we consider the average values of the body measurements among the species, we can see clear trends such as Gentoo penguins have longer flippers and weigh more than Adelie and Chinstrap penguins. They have slightly less bill depth compared to others. However, these averages don't represent the distribution of the data as a whole and thus a boxplot will be useful in understanding the distribution of data and see outliers, if there are any.
+
+## Body Measurements
+
+We have enough information from each species of penguins to further proceed with our analysis. We will now try to compare different penguins based on their body measurements such as bill length, bill depth, flipper length and body mass. Note that the lengths are calculated in mm and the body mass in grams.
+
+```{r, figures-sidebox, fig.show="hold", out.width="50%",echo=FALSE}
+ggplot(my.penguins, aes(x=flipper_length_mm,
+                        y = species,
+                        fill = species)) + 
+  geom_boxplot() + labs(x="Flipper Length",y="Species")
+
+ggplot(my.penguins, aes(x=body_mass_g,
+                        y = species,
+                        fill = species)) + 
+  geom_boxplot() + labs(x="Body Mass",y="Species")
+
+ggplot(my.penguins, aes(x=bill_length_mm,
+                        y = species,
+                        fill = species)) + 
+  geom_boxplot() + labs(x="Bill Length",y="Species")
+
+ggplot(my.penguins, aes(x=bill_depth_mm,
+                        y = species,
+                        fill = species)) + 
+  geom_boxplot() + labs(x="Bill Depth",y="Species")
+```
+
+The comparison of Flipper length suggests that Adelie and Chinstrap penguins have flipper length in the same range, however, for Gentoo penguins, the range is slightly higher. Similarly, Bill depth and Body mass of Adelie and Chinstrap penguins are roughly in the same range, and for Gentoo penguins the range is lower for bill depth and higher for body mass. This confirms our initial observation regarding flipper length and bill depth. Finally, the Bill length of Chinstrap and Gentoo penguins is similar in range with median bill length of Chinstrap being higher, but Adelie penguins have slightly smaller Bills in length.
+
+## Relationship between Features
+
+Now that we can differentiate between different species of penguins based on their features, let's try to look a little bit deeper and find any relations between different features. Since, these are all quantitative variables, Scatter plot would be best choice for comparison and discovering underlying trends in the data set.
+
+```{r, figures-side2,fig.align='center',fig.show="hold", out.width="40%", warning=FALSE, message=FALSE, echo=FALSE}
+ggplot(my.penguins, aes(x=flipper_length_mm, y=body_mass_g)) + 
+  geom_point(aes(color=species))+
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+             color="black") + labs(x="Flipper Length",y="Body Mass")
+ggplot(my.penguins, aes(x=bill_length_mm, y=bill_depth_mm)) + 
+  geom_point(aes(color=species))+
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+             color="black") + labs(x="Bill Length",y="Bill Depth")
+ggplot(my.penguins, aes(x=flipper_length_mm, y=bill_length_mm)) + 
+  geom_point(aes(color=species))+
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+             color="black") + labs(x="Flipper Length",y="Bill Length")
+```
+
+The scatter plot of flipper length vs Body mass shows a direct relation between the two. For all 3 species, as flipper length increases, body mass increases as well. In the scatter plot of flipper length vs. bill length, we can observe similar trends, albeit the correlation is not as readily discernible as the plot of flipper length vs Body mass.
+
+It is important to note that we see these scatter plots as a whole and not look at each species individually. If we consider the scatter plot for Flipper Length vs Bill Depth, there is an increasing trend for all 3 species individually. However, the trend does not hold when we look at them together. In fact, there is an observable downward trend suggesting an inverse relationship. This is known as Simpson's Paradox and should be avoided while making any statements regarding a data set containing different sub groups or categories.
+
+```{r, figures-sidesimpsons,fig.align='center',fig.show="hold", out.width="40%",warning=FALSE, message=FALSE, echo=FALSE}
+ggplot(my.penguins, aes(x=flipper_length_mm, y=bill_depth_mm, color = factor(species))) + 
+  geom_point()+
+  geom_smooth(method=lm) + labs(x="Flipper Length",y="Bill Depth")
+
+ggplot(my.penguins, aes(x=flipper_length_mm, y=bill_depth_mm)) + 
+  geom_point(aes(color=species))+
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",
+             color="black") + labs(x="Flipper Length",y="Bill Depth")
+```
+
+## Probability Distribution of Continuous Variables
+
+Now that we have done some exploratory analysis on the data, let's try to choose an appropriate probability distribution to represent one of the quantitative variables. We will be using the density plot for each of the variables(flipper_length_mm, body_mass_g, bill_length_mm, bill_depth_mm).
+
+```{r, figure-distribution, fig.show="hold",fig.align='center', out.width="40%", echo=FALSE}
+
+hist(my.penguins$flipper_length_mm, probability = TRUE, xlab = "Flipper Length", main = "Histogram of Flipper Length")
+lines(density(my.penguins$flipper_length_mm),lwd = 2)
+
+hist(my.penguins$body_mass_g, probability = TRUE, xlab = "Body Mass",main = "Histogram of Body Mass")
+lines(density(my.penguins$body_mass_g),lwd = 2)
+
+hist(my.penguins$bill_length_mm, probability = TRUE, xlab = "Bill Length",main = "Histogram of Bill Length")
+lines(density(my.penguins$bill_length_mm),lwd = 2)
+
+```
+
+Upon closely observing the histogram and density plots, we can say that the distribution of Bill Depth resembles a Normal Distribution. We can further support our decision by plotting Q-Q plot.
+
+```{r, fig.show="hold",fig.align='center',out.width="40%", echo=FALSE}
+hist(my.penguins$bill_depth_mm, probability = TRUE, xlab = "Bill Depth",main = "Histogram of Bill Depth")
+lines(density(my.penguins$bill_depth_mm),lwd = 2)
+# Calculate mean and standard deviation of your data
+mean_val <- mean(my.penguins$bill_depth_mm)
+sd_val <- sd(my.penguins$bill_depth_mm)
+
+# Create a sequence of x values for the normal distribution curve
+x <- seq(min(my.penguins$bill_depth_mm), max(my.penguins$bill_depth_mm), length = 200)
+
+# Calculate the corresponding y values for the normal distribution curve
+y <- dnorm(x, mean = mean_val, sd = sd_val)
+
+# Plot the normal distribution curve
+lines(x, y, col = "blue", lwd = 2)
+
+qqnorm(my.penguins$bill_depth_mm)
+qqline(my.penguins$bill_depth_mm)
+
+```
+
+As we can see that data points are quiet closely concentrated near the diagonal, which is an indicator of the random variable resembling normal distribution.
+
+Now that we have chosen a probability distribution for Bill Depth, let's derive the Maximum Likelihood function for the parameters to be estimated.
+
+Assuming that the 200 observations made for bill depth can be modeled as realizations of independent and identically distributed(IID) random variables $X_1,\ldots,X_{200}$ where each $X_i\sim~\text{N}(\mu,\sigma^2)$, let's consider the Probability density function and take the logarithm.
+\begin{align*}
+   p(x|\mu)&=\frac{e^-{\frac{1}{2}(\frac{x-\mu}{\sigma})^2}}{\sigma \sqrt{2\pi}}\\
+   \log p(x|\mu) &=\log\left(\frac{e^-{\frac{1}{2}(\frac{x-\mu}{\sigma})^2}}{\sigma \sqrt{2\pi}}\right)\\
+   &=-\frac{1}{2}(\frac{x-\mu}{\sigma})^2 - \log{\sigma\sqrt{2\pi}}
+   \end{align*}
+
+Now, we calculate the log-likelihood function
+\begin{align*}
+   \ell(\mu |\boldsymbol{x})
+   &= \log p(x_1|\mu) + \log p(x_2|\mu)+ \log p(x_3|\mu) 
+    + \log p(x_4|\mu) + \log p(x_5|\mu) + \ldots + \log p(x_{200}|\mu) \\
+   &= -\frac{1}{2}\left(\frac{x_1-\mu}{\sigma}\right)^2 - \log{\sigma\sqrt{2\pi}} 
+   -\frac{1}{2}\left(\frac{x_2-\mu}{\sigma}\right)^2 - \log{\sigma\sqrt{2\pi}} 
+   -\frac{1}{2}\left(\frac{x_3-\mu}{\sigma}\right)^2 - \log{\sigma\sqrt{2\pi}}\\
+   &\qquad -
+   \frac{1}{2}\left(\frac{x_4-\mu}{\sigma}\right)^2 - \log{\sigma\sqrt{2\pi}} 
+   -\frac{1}{2}\left(\frac{x_5-\mu}{\sigma}\right)^2 - \log{\sigma\sqrt{2\pi}} 
+   - \ldots \\
+   &= \left(-\sum_{i=1}^{200}(x_i-\mu)^2\right) \frac{1}{2\sigma^2} - K 
+   \end{align*} where $K={200}\log\sigma\sqrt{2\pi}$ is a constant which does not depend on $\mu$.
+
+To get the MLE, we differentiate the log-likelihood function with respect to $\mu$
+\begin{align*}
+   \frac{\partial}{\partial \mu}l(\mu|\boldsymbol{x})&=\frac{\partial}{\partial \mu}\left[\left(-\sum_{i=1}^{200}(x_i-\mu)^2\right)\ \frac{1}{2\sigma^2} - K\right]\\
+   &=-\frac{1}{2\sigma^2}\left(\frac{\partial}{\partial \mu}\sum_{i=1}^{200}(x_i-\mu)^2\right) - \frac{\partial}{\partial \mu}K \\
+   &=-\frac{1}{2\sigma^2}\left(\sum_{i=1}^{200}2(x_i-\mu)(-1)\right) \\
+   &=\left(\sum_{i=1}^{200}x_i-\hat\mu\right)\times \frac{1}{\sigma^2}
+   \end{align*}
+
+Now we solve for $\hat\mu$ by equating the above result to 0.
+\begin{align*}
+  \left(\sum_{i=1}^{200}x_i-\hat\mu\right)\times \frac{1}{\sigma^2}= 0\\
+  \left(\sum_{i=1}^{200}x_i-\hat\mu\right) &= 0\\
+   \sum_{i=1}^{200}x_i&={200}\hat{\mu}\\
+   \therefore\qquad\hat{\mu}&=\frac{1}{200}\sum_{i=1}^{200}x_i
+   \end{align*}
+
+Similarly, we can derive the MLE for $\sigma^2$ as well.
+\begin{align*}
+  \hat\sigma^2 &= \frac{1}{200}\sum_{i=1}^{200}(x_i - \hat\mu)^2
+  \end{align*}
+
+Now that we have MLE functions for the parameters, we can calculate Mean and Variance for Bill Depth.
+
+```{r, echo=FALSE}
+mean_penguins <- mean(my.penguins$bill_depth_mm)
+
+var_penguins <- var(my.penguins$bill_depth_mm)
+
+cat("Mean : ", mean_penguins)
+cat("\nVariance : ", var_penguins)
+```
+
+These values are quite helpful, however, these are not sufficient to make inferences about the population. There is a certain level of uncertainty with these values and this uncertainty can be quantified with the help of Confidence Intervals.
+
+To calculate Confidence Intervals of a normal distribution, we use Student's $t$-distribution formula for population mean.
+\begin{align*}
+  \bar{x} - t_{n-1,1-\frac{\alpha}{2}}
+  \frac{s}{\sqrt{n}} < \mu < \bar{x} + t_{n-1,1-\frac{\alpha}{2}}
+  \frac{s}{\sqrt{n}}
+  \end{align*}
+
+
+```{r}
+alpha <- 1 - 0.05
+t_val <- qt(1-alpha/2,199) #199 because n = 200 for dataset
+
+lower_bound <-
+  mean(my.penguins$bill_depth_mm) - t_val * sd(my.penguins$bill_depth_mm)/sqrt(200)
+
+upper_bound <-
+  mean(my.penguins$bill_depth_mm) + t_val * sd(my.penguins$bill_depth_mm)/sqrt(200)
+
+```
+
+```{r, echo=FALSE}
+cat("Confidence Interval: (", lower_bound, ", ", upper_bound, ")\n")
+```
+
+We calculated the 95% confidence interval which is between `r round(lower_bound,4)` and `r round(upper_bound,4)`. What this really means is that if samples were collected from the population over and over then, 95% of the times the population mean would lie in the above interval. This is much better than having just one value as representation of a whole population or sample and takes into account the uncertainty that comes with making inferences based on a sample.
+
+Based on above calculations for estimates of parameters and comparisons of histogram, density and Q-Q plots, we can say that Normal distribution is a good fit for the data. However, its not the only distribution suitable for the data. Most real world data can fit multiple distributions. The histogram of Bill depth suggests slight asymmetry in the data which can be a reason to not use normal distribution. Moreover, normal distribution doesn't work well when there are outliers present in the data and we do have outliers present as pointed out earlier by the box plot of Bill depth. Even though normal distribution is quite helpful in estimations and modelling real world data, it does not hold well when data is skewed or is tail heavy, hence, other distributions such poisson or log normal distributions are used as an alternative. 
+
+## Variables suitable for Determining Sex
+
+So far we have discussed about the data set from the perspective of being able to differentiate between different species of Penguins. Let's try to explore the data so that we can differentiate the gender of the Penguin.
+
+The average values of all the body measurements is a good starting point to begin our exploration.
+
+```{r, echo=FALSE}
+aggregate(cbind(flipper_length_mm, bill_length_mm, bill_depth_mm, body_mass_g) ~ sex,
+          data=my.penguins, mean)
+```
+
+Initial observations tell us that male penguins have longer flippers on average and thus also have high body mass. We have already observed this while looking for trends among different variable relationships for different species. Bill Length and depth of male penguins is also higher.
+
+These values will make more sense if we plot a box plot for these random variables. Box plot will also display the minimum and maximum of these variables and display outliers, if any.
+
+```{r, figures-sidebox3, fig.show="hold", out.width="50%",echo=FALSE}
+ggplot(my.penguins, aes(x=flipper_length_mm,
+                        y = sex,
+                        fill = sex)) + 
+  geom_boxplot() + labs(x="Flipper Length", y="Sex")
+
+ggplot(my.penguins, aes(x=body_mass_g,
+                        y = sex,
+                        fill = sex)) + 
+  geom_boxplot() + labs(x="Body Mass", y="Sex")
+
+ggplot(my.penguins, aes(x=bill_length_mm,
+                        y = sex,
+                        fill = sex)) + 
+  geom_boxplot() + labs(x="Bill Length", y="Sex")
+
+ggplot(my.penguins, aes(x=bill_depth_mm,
+                        y = sex,
+                        fill = sex)) + 
+  geom_boxplot() + labs(x="Bill Depth", y="Sex")
+```
+
+Most observable difference between male and female penguins is shown by bill depth. Range of bill depth for male penguins is quite higher than female penguins. This can form the basis of our hypothesis and we can assess this using Two sample t-test to determine how consistent it is with the data.
+
+Since we have already considered that Bill Depth follows normal distribution, we can go ahead and form our hypothesis.
+
+Let Null Hypothesis $H_0$ be that there is no significant difference in the bill depth between male and female penguins and Alternative Hypothesis $H_1$ be that there is a significant difference in the bill depth of male and female penguins.
+\begin{align*}
+  H_0: \mu_{male} &= \mu_{female} \quad and \quad H_1: \mu_{male} \neq \mu_{female}
+  \end{align*}
+
+In order to test the above hypothesis, we first need to deal with Variances. We will be performing Bartlett's test to determine whether the variances of the two populations are equal or not.
+
+```{r, echo=FALSE}
+bill_depth_male <- my.penguins$bill_depth_mm[my.penguins$sex == "male"]
+
+bill_depth_female <- my.penguins$bill_depth_mm[my.penguins$sex == "female"]
+
+bartlett.test(list(bill_depth_male,bill_depth_female))
+
+```
+
+We get the $p$-value of 0.8084, which is greater than 0.05, so the assumption of equal variances is valid for our $t$-test.
+
+Now, with this assumption we move on to compare the means of Bill Depth with respect to gender of the penguins.
+
+```{r, echo=FALSE}
+t.test(bill_depth_mm ~ sex, data = my.penguins, var.equal = TRUE)
+```
+
+We get $p$-value of 0.0000000001761, which is less 0.001. This suggests that there is strong evidence against $H_0$. As data is not consistent with $H_0$, we'll reject it and go with $H_1$.
+
+Our Alternative Hypothesis stated that there is a significant difference between bill depth of male and female penguins. Using mean bill depth of male and female penguins, the $p$-value of Two Sample $t$-test supports the same idea. Therefore, Bill depth would be a great deciding factor for differentiating male and female penguins.
+
+## Physical Characteristics based on Islands
+
+Finally, let's try to explore the idea of body measurements correlation with the island the penguins are from.
+
+```{r, echo=FALSE}
+table(my.penguins$species,my.penguins$island)
+```
+
+The above table provides quite useful information. Firstly, only Adelie penguins are present on all 3 islands. Chinstrap and Gentoo penguins are not present on all 3 islands and thus it is difficult to make any inference about their characteristics being affected by the island they are from.
+
+So, we will be comparing Adelie penguin's characteristics across all 3 islands to determine if their are any trends.
+
+```{r, figures-sidebox5, fig.show="hold",fig.align='center',out.width="38%",echo=FALSE}
+adelie_penguins <- my.penguins[my.penguins$species == "Adelie",]
+
+ggplot(adelie_penguins, aes(x=flipper_length_mm,
+                        y = island,
+                        fill = island)) + 
+  geom_boxplot() + labs(x="Flipper Length", y="Island")
+
+ggplot(adelie_penguins, aes(x=body_mass_g,
+                        y = island,
+                        fill = island)) + 
+  geom_boxplot() + labs(x="Body Mass", y="Island")
+
+ggplot(adelie_penguins, aes(x=bill_length_mm,
+                        y = island,
+                        fill = island)) + 
+  geom_boxplot() + labs(x="Bill Length", y="Island")
+
+ggplot(adelie_penguins, aes(x=bill_depth_mm,
+                        y = island,
+                        fill = island)) + 
+  geom_boxplot() + labs(x="Bill Depth", y="Island")
+```
+
+The flipper length and body mass of Adelie penguins is roughly in the same range across all 3 islands. Bill Depth is significantly higher on Torgersen than the other two islands. Bill length and Body mass are also nearly the same across all 3 islands.
+
+Even though these trends might seem interesting, we should keep in mind that these values are representation of a sample of 25-30 observations only. Also, these trends might not be followed by other species of penguins on the same island.  
+
+We could go for a $t$-test to determine whether these differences in values can lead to a usable result but since we have 3 islands i.e 3 Categories, it's not suitable. There are couple of reasons for that, first, $t$-tests are designed to compare two groups. Second, these tests could lead to Type-$I$ and Type-$II$ errors. And lastly, we could lose context of how all groups compare to each other. 
+
+```{r, echo=FALSE, results='hide'}
+adelie <- my.penguins[my.penguins$species=="Adelie",]
+
+adelie_dream <- adelie[adelie$island == "Dream",]
+adelie_torgersen <- adelie[adelie$island == "Torgersen",]
+adelie_biscoe <- adelie[adelie$island == "Biscoe",]
+
+result_dream_torgersen <- t.test(adelie_dream$bill_depth_mm,adelie_torgersen$bill_depth_mm)
+
+result_dream_biscoe <- t.test(adelie_dream$bill_depth_mm,adelie_biscoe$bill_depth_mm)
+
+result_biscoe_torgersen <- t.test(adelie_biscoe$bill_depth_mm,adelie_torgersen$bill_depth_mm)
+
+
+
+cat(result_dream_torgersen$p.value,"\n") #0.09078904
+cat(result_biscoe_torgersen$p.value,"\n") #0.267201
+cat(result_dream_biscoe$p.value) #0.4114704
+
+# Not enough evidence to reject null hypothesis
+```
+
